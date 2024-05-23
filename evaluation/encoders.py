@@ -6,6 +6,11 @@ from bert_pals import BertPalsEncoder, BertPalConfig, BertModel
 from adapter_fusion import AdapterEncoder, AdapterFusion
 import torch
 import logging
+import spacy
+from spacy.tokens import Doc
+from spacy.language import Language
+from gensim.models.doc2vec import Doc2Vec
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -128,3 +133,48 @@ class Model:
         except:
             embedding = output[:, self.reqd_token_idx, :]  # cls token
         return embedding.half() if self.use_fp16 else embedding
+
+
+def load_tokenizer(tokenizer_name):
+    # Define a custom component for removing punctuation and stopwords
+    @Language.component("filter_punct_and_stopwords")
+    def filter_punct_and_stopwords(doc):
+        return spacy.tokens.Doc(doc.vocab, words=[token.text.lower() for token in doc if not (token.is_stop or token.is_punct or token.is_space or token.is_quote)])
+
+    # Load the language model
+    nlp = spacy.load(tokenizer_name)
+
+    # Disable components we don't need
+    nlp.disable_pipe("tok2vec")
+    nlp.disable_pipe("parser")
+    nlp.disable_pipe("tagger")
+    nlp.disable_pipe("ner")
+    nlp.disable_pipe("attribute_ruler")
+    nlp.disable_pipe("lemmatizer")
+
+    # Add the custom component to the pipeline after the tagger and lemmatizer  
+    nlp.add_pipe('sentencizer')
+    nlp.add_pipe("filter_punct_and_stopwords", last=True)
+    return nlp
+
+class Doc2VecModel:
+    def __init__(self, model_loc: str = None, 
+                 tokenizer_name: str = 'en_core_web_lg', use_fp16=False):
+        self.tokenizer = load_tokenizer(tokenizer_name)
+        self.tokenizer.pad_token = ' '
+        self.tokenizer.sep_token = ' '
+        self.model = Doc2Vec.load(model_loc)
+        self.use_fp16 = use_fp16
+
+
+    def __call__(self, batch, batch_ids=None):
+
+        batch = [batch] if type(batch) == str else batch
+        batch_ids = [] if not batch_ids else batch_ids
+
+        embedding = torch.tensor(np.array([self.model.infer_vector([t.text for t in doc]) 
+                                  for doc in self.tokenizer.pipe(batch, n_process=-1)]))
+        if torch.cuda.is_available():
+            embedding = embedding.to('cuda')
+        return embedding.half() if self.use_fp16 else embedding
+        

@@ -101,7 +101,18 @@ class SupervisedEvaluator(Evaluator):
         preds = eval_fn(x_train, x_test, y_train)
         results = self.calc_metrics(y_test, preds)
         self.print_results(results)
-        return results
+        if self.task == SupervisedTask.REGRESSION:
+            indi_results = {split_dataset['test']['paper_id'][i]: 
+                            {metric: preds[i] - split_dataset['test']['label'][i] for metric in self.metrics} 
+                            for i in range(preds.shape[0])}
+        else:
+            indi_results = (y_test == preds)
+            indi_results = {split_dataset['test']['paper_id'][i]: 
+                            {metric: int(indi_results[i]) for metric in self.metrics} 
+                            for i in range(indi_results.shape[0])}
+
+        
+        return indi_results
 
     @staticmethod
     def read_dataset(data: datasets.DatasetDict, embeddings: Dict[str, np.ndarray]) -> Tuple[
@@ -197,7 +208,7 @@ class IREvaluator(Evaluator):
                 [query_measures[measure] for query_measures in results.values()]
             )
             metric_values[measure] = np.round(100 * res, 2)
-        return metric_values
+        return metric_values, results
 
     def evaluate(self, embeddings, **kwargs):
         logger.info(f"Loading labelled data from {self.test_dataset}")
@@ -211,10 +222,10 @@ class IREvaluator(Evaluator):
 
         qrels = self.get_qc_pairs(split_dataset["test"])
         preds = self.retrieval(embeddings, qrels)
-        results = self.calc_metrics(qrels, preds)
+        results, indi_results = self.calc_metrics(qrels, preds)
         self.print_results(results)
-        return results
-
+        return indi_results
+    
     def retrieval(self, embeddings, qrels: Dict[str, Dict[str, int]]) -> Dict[str, Dict[str, float]]:
         run = dict()
         for qid in qrels:

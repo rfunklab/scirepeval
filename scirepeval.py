@@ -2,7 +2,7 @@ import argparse
 import json
 from typing import List, Union
 
-from evaluation.encoders import Model
+from evaluation.encoders import Model, Doc2VecModel
 from evaluation.evaluator import IREvaluator, SupervisedEvaluator, SupervisedTask
 from evaluation.few_shot_evaluator import FewShotEvaluator
 from evaluation.gpt3_encoder import GPT3Model
@@ -114,9 +114,9 @@ class SciRepEval:
             for few_shot in few_shot_evaluators:
                 final_results[task_name]["few_shot"].append(
                     {"sample_size": few_shot.sample_size, "results": few_shot.evaluate(embeddings)})
-            with open(output, "w") as f:
-                json.dump(final_results, f, indent=4)
-
+        with open(output, "w") as f:
+            json.dump(final_results, f, indent=4)
+        return final_results
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -139,6 +139,8 @@ if __name__ == "__main__":
         model = GPT3Model(embed_model=args.gpt3_model)
     elif args.instructor:
         model = InstructorModel(args.model)
+    elif args.d2v_model:
+        model = Doc2VecModel(args.model, use_fp16=args.fp16)
     else:
         model = Model(variant=args.mtype, base_checkpoint=args.model, adapters_load_from=adapters_load_from,
                       fusion_load_from=args.fusion_dir,
