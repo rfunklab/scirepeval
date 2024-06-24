@@ -1,6 +1,6 @@
 from typing import Dict, Union, List
 
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, BertForMaskedLM
 import os
 from bert_pals import BertPalsEncoder, BertPalConfig, BertModel
 from adapter_fusion import AdapterEncoder, AdapterFusion
@@ -48,6 +48,12 @@ class EncoderFactory:
                                  fusion_dir=self.fusion_load_from, inference=True)
         else:
             raise ValueError("Unknown encoder type: {}".format(variant))
+        
+    def get_perplexity_model(self, variant: str):
+        if variant == "default":
+            return BertForMaskedLM.from_pretrained(self.base_checkpoint).eval()
+        else:
+            raise ValueError("Unknown perplexity type: {}".format(variant))
 
 
 class Model:
@@ -58,6 +64,8 @@ class Model:
                  max_len: int = 512, use_fp16=False):
         self.variant = variant
         self.encoder = EncoderFactory(base_checkpoint, adapters_load_from, fusion_load_from, all_tasks).get_encoder(
+            variant)
+        self.perplexity_model = EncoderFactory(base_checkpoint, adapters_load_from, fusion_load_from, all_tasks).get_perplexity_model(
             variant)
         if torch.cuda.is_available():
             self.encoder.to('cuda')
@@ -108,6 +116,63 @@ class Model:
         input_ids.to('cuda')
         if self.variant == "default":
             output = self.encoder(**input_ids)
+        elif type(self._task_id) != dict:
+            output = self.encoder(task_id=self._task_id, **input_ids)
+        else:
+            x = input_ids["input_ids"]
+            output = torch.zeros(x.shape[0], x.shape[1], self.hidden_dim).to("cuda")
+            q_idx = torch.tensor([i for i, b in enumerate(batch_ids) if b[1] == "q"])
+            c_idx = torch.tensor([i for i, b in enumerate(batch_ids) if b[1] == "c"])
+
+            if not q_idx.shape[0]:
+                output = self.encoder(task_id=self._task_id["candidates"], **input_ids)
+            elif not c_idx.shape[0]:
+                output = self.encoder(task_id=self._task_id["query"], **input_ids)
+            else:
+                for i, v in enumerate(sorted(self._task_id.values())):
+                    curr_input_idx = q_idx if v == "[QRY]" else c_idx
+                    curr_input = x[curr_input_idx]
+                    curr_output = self.encoder(task_id=v, input_ids=curr_input,
+                                               attention_mask=input_ids["attention_mask"][curr_input_idx])
+                    try:
+                        output[curr_input_idx] = curr_output  # adapters
+                    except:
+                        output[curr_input_idx] = curr_output.last_hidden_state  # pals
+        if self.pooling_mode == "cls":
+            try:
+                embedding = output.last_hidden_state[:, self.reqd_token_idx, :]  # cls token
+            except:
+                embedding = output[:, self.reqd_token_idx, :]  # cls token
+        elif self.pooling_mode == "mean":
+            embedding = torch.sum(
+                 output.last_hidden_state * input_ids["attention_mask"].unsqueeze(-1), dim=1
+            ) / torch.clamp(torch.sum(input_ids["attention_mask"], dim=1, keepdims=True), min=1e-9)
+        else:
+            raise ValueError(f"pooling_mode must be one of 'cls' or 'mean'. Got: {self.pooling_mode}")
+        return embedding.half() if self.use_fp16 else embedding
+
+
+    def perplexity(self, batch, batch_ids=None):
+        def append_ctrl_code(batch, batch_ids):
+            if type(self._task_id) == dict:
+                batch = [f"{self.task_id['query']} {text}" if bid[1] == "q" else f"{self.task_id['candidates']} {text}"
+                         for text, bid in zip(batch, batch_ids)]
+            else:
+                batch = [f"{self.task_id} {text}" for text in batch]
+            return batch
+
+        batch = [batch] if type(batch) == str else batch
+        batch_ids = [] if not batch_ids else batch_ids
+        if self.use_ctrl_codes:
+            batch = append_ctrl_code(batch, batch_ids)
+        input_ids = self.tokenizer(batch, padding=True, truncation=True,
+                                   return_tensors="pt", return_token_type_ids=False, max_length=self.max_length)
+        if torch.cuda.is_available():
+            input_ids.to('cuda')
+            self.perplexity_model.to('cuda')
+        self.perplexity_model.eval()
+        if self.variant == "default":
+            output = self.perplexity_model(**input_ids)
         elif type(self._task_id) != dict:
             output = self.encoder(task_id=self._task_id, **input_ids)
         else:

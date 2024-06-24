@@ -9,6 +9,7 @@ from evaluation.gpt3_encoder import GPT3Model
 from evaluation.instructor import InstructorModel
 from reviewer_matching import ReviewerMatchingEvaluator
 from evaluation.eval_datasets import SimpleDataset, IRDataset
+import numpy as np
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -18,11 +19,21 @@ import pytorch_lightning as pl
 
 pl.seed_everything(42, workers=True)
 
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)
+
 
 class SciRepEval:
 
     def __init__(self, tasks_config: str = "scirepeval_tasks.jsonl", task_list: List[str] = None,
-                 task_formats: List[str] = None, batch_size: int = 32):
+                 task_formats: List[str] = None, batch_size: int = 32, compute_perplexity: bool = False):
         tasks_dict = dict()
         task_by_formats = dict()
         with open(tasks_config, encoding="utf-8") as f:
@@ -41,6 +52,7 @@ class SciRepEval:
             for task_format in task_formats:
                 self.tasks.update({k: tasks_dict[k] for k in task_by_formats[task_format]})
         self.batch_size = batch_size
+        self.compute_perplexity = compute_perplexity
 
     def evaluate(self, model: Union[Model, List[Model]], output: str):
         final_results = dict()
@@ -103,6 +115,8 @@ class SciRepEval:
                     data_class = SimpleDataset if task_data.get("simple_format") else IRDataset
                     evaluator = IREvaluator(task_name, model=model, dataset_class=data_class, **kwargs)
             embeddings = evaluator.generate_embeddings(save_path) if not load_path else load_path
+            # if self.compute_perplexity:
+            #     evaluator.compute_perplexity(save_path)
             results = evaluator.evaluate(embeddings)
             if not few_shot_evaluators:
                 final_results[task_name] = results
@@ -115,7 +129,7 @@ class SciRepEval:
                 final_results[task_name]["few_shot"].append(
                     {"sample_size": few_shot.sample_size, "results": few_shot.evaluate(embeddings)})
         with open(output, "w") as f:
-            json.dump(final_results, f, indent=4)
+            json.dump(final_results, f, indent=4, cls=NpEncoder)
         return final_results
 
 if __name__ == "__main__":

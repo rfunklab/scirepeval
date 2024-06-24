@@ -17,7 +17,7 @@ for i in range(len(model_names)):
     results_loc = f'results/{model_name}/results.jsonl'
 
     model = Model(variant="default", base_checkpoint=model_checkpoint)
-    evaluator = SciRepEval(tasks_config=tasks_config, batch_size=batch_size)
+    evaluator = SciRepEval(tasks_config=tasks_config, batch_size=batch_size, compute_perplexity=True)
     preds = evaluator.evaluate(model, results_loc)
 
 

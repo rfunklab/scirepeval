@@ -44,6 +44,10 @@ class Evaluator:
     def generate_embeddings(self, save_path: str = None):
         logger.info("Generating embeddings... this might take a while")
         return self.embeddings_generator.generate_embeddings(save_path)
+    
+    def compute_perplexity(self, save_path: str = None):
+        logger.info("Generating perplexity... this might take a while")
+        return self.embeddings_generator.compute_perplexity(save_path)
 
     @abstractmethod
     def evaluate(self, embeddings: Union[str, Dict[str, np.ndarray]], **kwargs) -> Dict[str, float]:
@@ -103,12 +107,14 @@ class SupervisedEvaluator(Evaluator):
         self.print_results(results)
         if self.task == SupervisedTask.REGRESSION:
             indi_results = {split_dataset['test']['paper_id'][i]: 
-                            {metric: preds[i] - split_dataset['test']['label'][i] for metric in self.metrics} 
+                            {**{metric: preds[i] - split_dataset['test']['label'][i] for metric in self.metrics}, 
+                            **{'label': split_dataset['test']['label'][i], 'pred': preds[i]}}
                             for i in range(preds.shape[0])}
         else:
             indi_results = (y_test == preds)
             indi_results = {split_dataset['test']['paper_id'][i]: 
-                            {metric: int(indi_results[i]) for metric in self.metrics} 
+                            {**{metric: int(indi_results[i]) for metric in self.metrics}, 
+                             **{'label': y_test[i], 'pred': preds[i]}}
                             for i in range(indi_results.shape[0])}
 
         
@@ -200,7 +206,7 @@ class IREvaluator(Evaluator):
     def calc_metrics(self, qrels, run):
         evaluator = pytrec_eval.RelevanceEvaluator(qrels, set(self.metrics))
         results = evaluator.evaluate(run)
-
+        [v.update(run[k]) for k, v in results.items()]
         metric_values = {}
         for measure in sorted(self.metrics):
             res = pytrec_eval.compute_aggregated_measure(
