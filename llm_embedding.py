@@ -7,6 +7,7 @@ import multiprocessing as mp
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
+
 import torch
 from transformers import AutoTokenizer, AutoModel
 import argparse
@@ -38,7 +39,12 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
 
     parquet_file = pq.ParquetFile(absloc)
 
-    for batch in tqdm(parquet_file.iter_batches(batch_size=chunksize), desc='file batches'):
+    # count number of rows
+    dataset = pq.ParquetDataset(absloc)
+    nrows = sum(p.count_rows() for p in dataset.fragments)
+    print(f"Number of rows in {absloc}: {nrows}")
+
+    for batch in tqdm(parquet_file.iter_batches(batch_size=chunksize), desc='file batches', total=nrows // chunksize):
         df = batch.to_pandas()    
 
         embds = None
