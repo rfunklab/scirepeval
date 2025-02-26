@@ -1,7 +1,7 @@
 from scirepeval import SciRepEval
 from evaluation.encoders import Model, Doc2VecModel
 
-mode = 'save'
+mode = 'load_expansion'
 model_names = ['SciBERT', 'SPECTER', 'SciNCL']
 model_checkpoints = ['allenai/scibert_scivocab_uncased', 'allenai/specter2_base', 'malteos/scincl']
 batch_size = 8
