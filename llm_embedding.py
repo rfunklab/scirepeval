@@ -51,7 +51,7 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
                 truncation=True,
                 return_tensors="pt",
                 return_token_type_ids=False,
-                # max_length=max_len,
+                max_length=max_len,
             )
             if torch.cuda.is_available():
                 input_ids.to("cuda")
