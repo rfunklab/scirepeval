@@ -45,11 +45,19 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
     print(f"Number of rows in {absloc}: {nrows}")
 
     n = 0
-    for batch in tqdm(parquet_file.iter_batches(batch_size=chunksize), desc='file batches', total=nrows // chunksize):
-        df = batch.to_pandas()    
+    for batch in tqdm(parquet_file.iter_batches(batch_size=chunksize), desc='file batches', 
+                      total=(nrows // chunksize) if endline is None else (endline - startline // chunksize)):
+        
+        if n < startline:
+            n += chunksize
+            if n >= endline:
+                break
+            print(f'skipping {n} lines')
+            continue
+        
+        df = batch.to_pandas()
 
         embds = None
-
         for bix in tqdm(range(0, df.shape[0], batch_size), desc='embedding batches'):
             batch = df.iloc[bix : bix + batch_size]
             input_ids = tokenizer(
@@ -80,8 +88,10 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
             header=False,
             mode="a",  # append data to csv file
         )
-        
+
         n += chunksize
+        if n >= endline:
+            break
         print('processed', n, 'rows')
         
 
