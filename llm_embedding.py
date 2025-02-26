@@ -38,12 +38,12 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
 
     parquet_file = pq.ParquetFile(absloc)
 
-    for batch in parquet_file.iter_batches(batch_size=chunksize):
+    for batch in tqdm(parquet_file.iter_batches(batch_size=chunksize), desc='file batches'):
         df = batch.to_pandas()    
 
         embds = None
 
-        for bix in tqdm(range(0, df.shape[0], batch_size)):
+        for bix in tqdm(range(0, df.shape[0], batch_size), desc='embedding batches'):
             batch = df.iloc[bix : bix + batch_size]
             input_ids = tokenizer(
                 batch["abstract"].tolist(),
