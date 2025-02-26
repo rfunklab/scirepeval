@@ -50,7 +50,7 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
         
         if n < startline:
             n += chunksize
-            if n >= endline:
+            if endline is not None and n >= endline:
                 break
             print(f'skipping {n} lines')
             continue
@@ -90,7 +90,7 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
         )
 
         n += chunksize
-        if n >= endline:
+        if endline is not None and n >= endline:
             break
         print('processed', n, 'rows')
         
