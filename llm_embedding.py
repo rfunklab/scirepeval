@@ -44,6 +44,7 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
     nrows = sum(p.count_rows() for p in dataset.fragments)
     print(f"Number of rows in {absloc}: {nrows}")
 
+    n = 0
     for batch in tqdm(parquet_file.iter_batches(batch_size=chunksize), desc='file batches', total=nrows // chunksize):
         df = batch.to_pandas()    
 
@@ -79,9 +80,10 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
             header=False,
             mode="a",  # append data to csv file
         )
-        n += df.shape[0]
-        if n >= endline - startline:
-            break
+        
+        n += chunksize
+        print('processed', n, 'rows')
+        
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run embedding generation.")
