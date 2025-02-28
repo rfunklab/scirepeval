@@ -46,7 +46,7 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
 
     n = 0
     for batch in tqdm(parquet_file.iter_batches(batch_size=chunksize), desc='file batches', 
-                      total=(nrows // chunksize) if endline is None else (endline - startline // chunksize)):
+                      total=(nrows // chunksize) if endline is None else ((endline - startline) // chunksize)):
         
         if n < startline:
             n += chunksize
