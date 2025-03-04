@@ -13,7 +13,7 @@ from transformers import AutoTokenizer, AutoModel
 import argparse
 
 timestr = time.strftime("%Y%m%d-%H%M%S")
-chunksize = 100000
+chunksize = 4096
 batch_size = 2048
 max_len = 512
 startline = 0
@@ -32,7 +32,7 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
     if torch.cuda.is_available():
         model.to("cuda")
 
-    savename = f"{model_name.replace('/','-')}_{timestr}_{startline}-{endline}.csv"
+    savename = f"{model_name.replace('/','-')}_{timestr}_{startline}-{endline}.jsonl"
     saveloc = os.path.join(saveloc, savename)
     if os.path.exists(saveloc):
         os.remove(saveloc)
@@ -55,7 +55,7 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
             print(f'skipping {n} lines')
             continue
         
-        df = batch.to_pandas()
+        df = batch.to_pandas().drop(columns=["title", "year"])
 
         embds = None
         for bix in tqdm(range(0, df.shape[0], batch_size), desc='embedding batches'):
@@ -78,14 +78,14 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
                 else:
                     embds = np.append(embds, cls_embeddings, axis=0)
         df = df.drop(columns=["abstract"])
-        df = pd.concat(
-            [df.reset_index(drop=True), pd.DataFrame(embds).reset_index(drop=True)], axis=1
-        )
+        df = df.reset_index(drop=True).rename(columns={"corpusid": "doc_id"})
+        df['embedding'] = embds.tolist()
 
-        df.to_csv(
+        df.to_json(
             saveloc,
+            lines=True,
+            orient="records",
             index=False,
-            header=False,
             mode="a",  # append data to csv file
         )
 
