@@ -7,7 +7,12 @@ import multiprocessing as mp
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
+<<<<<<< HEAD
 
+=======
+import boto3
+import config
+>>>>>>> e1a209d... remove key
 import torch
 from transformers import AutoTokenizer, AutoModel
 import argparse
@@ -93,6 +98,26 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
         if endline is not None and n >= endline:
             break
         print('processed', n, 'rows')
+    
+    
+    # now upload to msi s3
+    s3 = boto3.resource(
+        "s3",
+        aws_access_key_id=config['aws_access_key_id'],
+        aws_secret_access_key=config['aws_secret_access_key'],
+        endpoint_url="https://s3.msi.umn.edu",
+    )
+
+    try:
+        s3.Bucket("scirepeval").upload_file(
+            saveloc,
+            saveloc
+        )
+        
+        print(f"{saveloc} successfully uploaded to s3://scirepeval")
+        os.remove(saveloc)
+    except Exception as e:
+        print(f"Error uploading to s3: {e}")
         
 
 if __name__ == "__main__":
