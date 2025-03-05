@@ -13,12 +13,12 @@ from transformers import AutoTokenizer, AutoModel
 import argparse
 
 timestr = time.strftime("%Y%m%d-%H%M%S")
-chunksize = 4096
+chunksize = 10000
 batch_size = 2048
 max_len = 512
 startline = 0
 
-model_name = "allenai/scibert_scivocab_uncased"
+model_name = "malteos/scincl"
 absloc = (
     "data/s2ag/processed/abstracts.parquet.gz"
 )
