@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 import boto3
-
+import config
 import torch
 from transformers import AutoTokenizer, AutoModel
 import argparse
@@ -99,8 +99,8 @@ def run(batch_size=batch_size, chunksize=chunksize, model_name=model_name, abslo
     # now upload to msi s3
     s3 = boto3.resource(
         "s3",
-        aws_access_key_id="JHB6IPF7DJF4H2XBBA26",
-        aws_secret_access_key="ACf3GWzZcJPovEJunjCrgBaUebcGVDsxtnuK5ZJV",
+        aws_access_key_id=config['aws_access_key_id'],
+        aws_secret_access_key=config['aws_secret_access_key'],
         endpoint_url="https://s3.msi.umn.edu",
     )
 
