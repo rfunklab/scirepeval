@@ -7,12 +7,8 @@ import multiprocessing as mp
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
-<<<<<<< HEAD
-
-=======
 import boto3
 import config
->>>>>>> e1a209d... remove key
 import torch
 from transformers import AutoTokenizer, AutoModel
 import argparse
