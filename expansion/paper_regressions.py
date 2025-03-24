@@ -41,8 +41,8 @@ def main(paper_loc=paper_loc, cite_loc=cite_loc,
     if not os.path.exists(saveloc):
         os.makedirs(saveloc)
 
-    train.to_json(os.path.join(saveloc, 'train.json'), orient='records', index=False, lines=True)
-    test.to_json(os.path.join(saveloc, 'test.json'), orient='records', index=False, lines=True)
+    train.to_json(os.path.join(saveloc, 'train.jsonl'), orient='records', index=False, lines=True)
+    test.to_json(os.path.join(saveloc, 'test.jsonl'), orient='records', index=False, lines=True)
 
 
 
