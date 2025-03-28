@@ -54,8 +54,8 @@ def train_and_evaluate(batch_size, train_file, test_file, label_key, save_loc, t
     model_save_file = os.path.join(save_loc, f"{label_key}_model.pth")
     loss_save_file = os.path.join(save_loc, f"{label_key}_losses.csv")
 
-    model = AutoModel.from_pretrained('allenai/scibert_scivocab_uncased').to(device)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = AutoModel.from_pretrained('allenai/scibert_scivocab_uncased').to(device)
     tokenizer = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_uncased')
 
     if os.path.exists(model_save_file):
