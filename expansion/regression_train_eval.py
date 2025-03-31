@@ -67,7 +67,9 @@ def train_and_evaluate(batch_size, train_file, test_file, label_key, save_loc, t
 
     if os.path.exists(model_save_file):
         print(f"Model already exists at {model_save_file}. Loading...")
-        regressor = torch.load(model_save_file).to(device)
+        regressor = Regressor(model.config.hidden_size).to(device)
+        regressor.load_state_dict(torch.load(model_save_file, weights_only=True))
+        regressor = regressor.to(device)
     else:
         regressor = Regressor(model.config.hidden_size).to(device)
     
