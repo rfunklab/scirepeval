@@ -124,15 +124,15 @@ def train_and_evaluate(batch_size, train_file, test_file, label_key, save_loc, t
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Train and evaluate a regression model.")
-    parser.add_argument('--batch_size', type=int, default=batch_size, 
-                        help='Batch size for training and evaluation.')
-    parser.add_argument('--train_file', type=str,  required=True,
+    parser.add_argument('--batch_size', type=int, required=False, 
+                        default=batch_size, help='Batch size for training and evaluation.')
+    parser.add_argument('--train_file', type=str,  required=False,
                         default=train_file, help='Path to the training data file.')
-    parser.add_argument('--test_file', type=str, required=True, 
+    parser.add_argument('--test_file', type=str, required=False, 
                         default=test_file, help='Path to the testing data file.')
-    parser.add_argument('--label_key', type=str, required=True, 
+    parser.add_argument('--label_key', type=str, required=False, 
                         default=label_key, help='Key for the label in the dataset (e.g., "year" or "i_5").')
-    parser.add_argument('--save_loc', type=str, required=True,
+    parser.add_argument('--save_loc', type=str, required=False,
                         default=save_loc, help='Directory to save model, losses, and predictions.')
     parser.add_argument('--test_only', action='store_true', help='Flag to indicate whether to train the model.')
 
