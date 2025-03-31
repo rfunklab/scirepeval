@@ -1,10 +1,17 @@
 import os
+import argparse
 import json
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer, AutoModel
 from tqdm import tqdm
+
+batch_size = 1024
+train_file = 'data/s2ag/expansion/paper_regressions/train.jsonl'
+test_file = 'data/s2ag/expansion/paper_regressions/test.jsonl'
+label_key = 'year'  # or 'i_5'
+save_loc = f'data/s2ag/expansion/paper_regressions'
 
 class JsonlDataset(Dataset):
     def __init__(self, file_path, label_key):
@@ -115,10 +122,26 @@ def train_and_evaluate(batch_size, train_file, test_file, label_key, save_loc, t
             f.write(json.dumps({'index':i, 'prediction': pred}) + '\n')
 
 if __name__ == "__main__":
-    batch_size = 1024
-    train_file = 'data/s2ag/expansion/paper_regressions/train.jsonl'
-    test_file = 'data/s2ag/expansion/paper_regressions/test.jsonl'
-    label_key = 'year'  # or 'i_5'
-    save_loc = f'data/s2ag/expansion/paper_regressions'
-    train = True
+
+    parser = argparse.ArgumentParser(description="Train and evaluate a regression model.")
+    parser.add_argument('--batch_size', type=int, default=batch_size, 
+                        help='Batch size for training and evaluation.')
+    parser.add_argument('--train_file', type=str,  required=True,
+                        default=train_file, help='Path to the training data file.')
+    parser.add_argument('--test_file', type=str, required=True, 
+                        default=test_file, help='Path to the testing data file.')
+    parser.add_argument('--label_key', type=str, required=True, 
+                        default=label_key, help='Key for the label in the dataset (e.g., "year" or "i_5").')
+    parser.add_argument('--save_loc', type=str, required=True,
+                        default=save_loc, help='Directory to save model, losses, and predictions.')
+    parser.add_argument('--test_only', action='store_true', help='Flag to indicate whether to train the model.')
+
+    args = parser.parse_args()
+
+    batch_size = args.batch_size
+    train_file = args.train_file
+    test_file = args.test_file
+    label_key = args.label_key
+    save_loc = args.save_loc
+    train = not args.test_only
     train_and_evaluate(batch_size, train_file, test_file, label_key, save_loc, train=train)
