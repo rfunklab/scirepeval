@@ -121,7 +121,7 @@ def train_and_evaluate(batch_size, train_file, test_file, label_key, save_loc, t
     with open(result_save_file, 'w') as f:
         for i in tqdm(range(len(all_preds)), desc="Saving predictions"):
             pred = all_preds[i]
-            f.write(json.dumps({'index':i, 'prediction': pred}) + '\n')
+            f.write(json.dumps({'index':i, 'prediction': str(pred)}) + '\n')
 
 if __name__ == "__main__":
 
