@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 from expansion.defaults import default_config
 from expansion.utils import train_test_split
 
@@ -26,6 +27,7 @@ def main(paper_loc=paper_loc, cite_loc=cite_loc,
     # load citation data
     print('loading citation data...')
     citations = pd.read_parquet(cite_loc, columns=[f'i_{horizon}'])
+    citations[f'i_{horizon}'] = np.log(1 + citations[f'i_{horizon}'])
     df = df.merge(citations, left_on='corpusid', right_index=True, how='inner')
     
     # should probably join on abstract non-null values here to make sure we're only
