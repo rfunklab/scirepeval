@@ -12,6 +12,7 @@ train_file = 'data/s2ag/expansion/paper_regressions/train.jsonl'
 test_file = 'data/s2ag/expansion/paper_regressions/test.jsonl'
 label_key = 'year'  # or 'i_5'
 save_loc = f'data/s2ag/expansion/paper_regressions'
+model_name = 'allenai/scibert_scivocab_uncased'
 
 class JsonlDataset(Dataset):
     def __init__(self, file_path, label_key):
@@ -56,13 +57,13 @@ def embed_abstracts(abstracts, model, tokenizer, device):
     embeddings = outputs.last_hidden_state[:, 0, :]
     return embeddings
 
-def train_and_evaluate(batch_size, train_file, test_file, label_key, save_loc, train=True):
+def train_and_evaluate(batch_size, train_file, test_file, label_key, save_loc, model_name, train=True):
     result_save_file = os.path.join(save_loc, f"{label_key}_outputs.jsonl")
     model_save_file = os.path.join(save_loc, f"{label_key}_model.pth")
     loss_save_file = os.path.join(save_loc, f"{label_key}_losses.csv")
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = AutoModel.from_pretrained('allenai/scibert_scivocab_uncased').to(device)
+    model = AutoModel.from_pretrained(model_name).to(device)
     tokenizer = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_uncased')
 
     if os.path.exists(model_save_file):
@@ -136,6 +137,8 @@ if __name__ == "__main__":
                         default=label_key, help='Key for the label in the dataset (e.g., "year" or "i_5").')
     parser.add_argument('--save_loc', type=str, required=False,
                         default=save_loc, help='Directory to save model, losses, and predictions.')
+    parser.add_argument('--model_name', type=str, required=False,
+                        default=model_name, help='Huggingface model name')
     parser.add_argument('--test_only', action='store_true', help='Flag to indicate whether to train the model.')
 
     args = parser.parse_args()
@@ -145,5 +148,6 @@ if __name__ == "__main__":
     test_file = args.test_file
     label_key = args.label_key
     save_loc = args.save_loc
+    model_name = args.model_name
     train = not args.test_only
-    train_and_evaluate(batch_size, train_file, test_file, label_key, save_loc, train=train)
+    train_and_evaluate(batch_size, train_file, test_file, label_key, save_loc, model_name, train=train)
